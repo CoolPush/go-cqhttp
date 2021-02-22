@@ -59,30 +59,35 @@ func NewQQBot(cli *client.QQClient, conf *global.JSONConfig) *CQBot {
 	} else {
 		log.Warn("警告: 信息数据库已关闭，将无法使用 [回复/撤回] 等功能。")
 	}
-	bot.Client.OnPrivateMessage(bot.privateMessageEvent)
-	bot.Client.OnGroupMessage(bot.groupMessageEvent)
-	bot.Client.OnSelfGroupMessage(bot.groupMessageEvent)
-	bot.Client.OnTempMessage(bot.tempMessageEvent)
-	bot.Client.OnGroupMuted(bot.groupMutedEvent)
-	bot.Client.OnGroupMessageRecalled(bot.groupRecallEvent)
-	bot.Client.OnGroupNotify(bot.groupNotifyEvent)
-	bot.Client.OnFriendNotify(bot.friendNotifyEvent)
-	bot.Client.OnFriendMessageRecalled(bot.friendRecallEvent)
-	bot.Client.OnReceivedOfflineFile(bot.offlineFileEvent)
-	bot.Client.OnJoinGroup(bot.joinGroupEvent)
-	bot.Client.OnLeaveGroup(bot.leaveGroupEvent)
-	bot.Client.OnGroupMemberJoined(bot.memberJoinEvent)
-	bot.Client.OnGroupMemberLeaved(bot.memberLeaveEvent)
-	bot.Client.OnGroupMemberPermissionChanged(bot.memberPermissionChangedEvent)
-	bot.Client.OnGroupMemberCardUpdated(bot.memberCardUpdatedEvent)
+
 	// need impl: auto accept friend request
 	bot.Client.OnNewFriendRequest(bot.friendRequestEvent)
-	bot.Client.OnNewFriendAdded(bot.friendAddedEvent)
 	// need impl: auto accept user invited bot join group request
 	bot.Client.OnGroupInvited(bot.groupInvitedEvent)
-	bot.Client.OnUserWantJoinGroup(bot.groupJoinReqEvent)
-	bot.Client.OnOtherClientStatusChanged(bot.otherClientStatusChangedEvent)
-	bot.Client.OnGroupDigest(bot.groupEssenceMsg)
+
+	if conf.CoolPushEventPost {
+		bot.Client.OnPrivateMessage(bot.privateMessageEvent)
+		bot.Client.OnGroupMessage(bot.groupMessageEvent)
+		bot.Client.OnSelfGroupMessage(bot.groupMessageEvent)
+		bot.Client.OnTempMessage(bot.tempMessageEvent)
+		bot.Client.OnGroupMuted(bot.groupMutedEvent)
+		bot.Client.OnGroupMessageRecalled(bot.groupRecallEvent)
+		bot.Client.OnGroupNotify(bot.groupNotifyEvent)
+		bot.Client.OnFriendNotify(bot.friendNotifyEvent)
+		bot.Client.OnFriendMessageRecalled(bot.friendRecallEvent)
+		bot.Client.OnReceivedOfflineFile(bot.offlineFileEvent)
+		bot.Client.OnJoinGroup(bot.joinGroupEvent)
+		bot.Client.OnLeaveGroup(bot.leaveGroupEvent)
+		bot.Client.OnGroupMemberJoined(bot.memberJoinEvent)
+		bot.Client.OnGroupMemberLeaved(bot.memberLeaveEvent)
+		bot.Client.OnGroupMemberPermissionChanged(bot.memberPermissionChangedEvent)
+		bot.Client.OnGroupMemberCardUpdated(bot.memberCardUpdatedEvent)
+		bot.Client.OnNewFriendAdded(bot.friendAddedEvent)
+		bot.Client.OnUserWantJoinGroup(bot.groupJoinReqEvent)
+		bot.Client.OnOtherClientStatusChanged(bot.otherClientStatusChangedEvent)
+		bot.Client.OnGroupDigest(bot.groupEssenceMsg)
+	}
+
 	go func() {
 		i := conf.HeartbeatInterval
 		if i < 0 {
