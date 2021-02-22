@@ -30,7 +30,7 @@ var DefaultConfigWithComments = `
     // 是否启用内置数据库
     // 启用将会增加10-20MB的内存占用和一定的磁盘空间
     // 关闭将无法使用 撤回 回复 get_msg 等上下文相关功能
-    enable_db: true
+    enable_db: false
     // 访问密钥, 强烈推荐在公网的服务器设置
     access_token: ""
     // 重连设置
@@ -39,9 +39,9 @@ var DefaultConfigWithComments = `
         // 如不启用掉线后将不会自动重连
         enabled: true
         // 重连延迟, 单位秒
-        relogin_delay: 3
+        relogin_delay: 30
         // 最大重连次数, 0为无限制
-        max_relogin_times: 0
+        max_relogin_times: 10
     }
     // API限速设置
     // 该设置为全局生效
@@ -62,7 +62,7 @@ var DefaultConfigWithComments = `
     // 是否强制分片发送消息
     // 分片发送将会带来更快的速度
     // 但是兼容性会有些问题
-    force_fragmented: false
+    force_fragmented: true
     // 心跳频率, 单位秒
     // -1 为关闭心跳
     heartbeat_interval: 0
@@ -87,7 +87,7 @@ var DefaultConfigWithComments = `
     // 正向WS设置
     ws_config: {
         // 是否启用正向WS服务器
-        enabled: true
+        enabled: false
         // 正向WS服务器监听地址
         host: 0.0.0.0
         // 正向WS服务器监听端口
@@ -120,11 +120,11 @@ var DefaultConfigWithComments = `
     // 是否启用 DEBUG
     debug: false
     // 日志等级 trace,debug,info,warn,error
-    log_level: "info"
+    log_level: "warn"
     // WebUi 设置
     web_ui: {
         // 是否启用 WebUi
-        enabled: true
+        enabled: false
         // 监听地址
         host: 127.0.0.1
         // 监听端口
