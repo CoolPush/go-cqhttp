@@ -66,8 +66,8 @@ var DefaultConfigWithComments = `
     // 心跳频率, 单位秒
     // -1 为关闭心跳
     heartbeat_interval: 0
-	// 酷推是否开启事件输出 true 开启所有事件 false 只开启部分加好友和入群邀请
-	coolpush_event_post: false
+    // 酷推是否开启事件输出 true 开启所有事件 false 只开启部分加好友和入群邀请
+    coolpush_event_post: false
     // HTTP设置
     http_config: {
         // 是否启用正向HTTP服务器
