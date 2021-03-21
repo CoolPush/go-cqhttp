@@ -61,7 +61,9 @@ func NewQQBot(cli *client.QQClient, conf *global.JSONConfig) *CQBot {
 	}
 	bot.Client.OnPrivateMessage(bot.privateMessageEvent)
 	bot.Client.OnGroupMessage(bot.groupMessageEvent)
-	bot.Client.OnSelfGroupMessage(bot.groupMessageEvent)
+	if conf.EnableSelfMessage {
+		bot.Client.OnSelfGroupMessage(bot.groupMessageEvent)
+	}
 	bot.Client.OnTempMessage(bot.tempMessageEvent)
 	bot.Client.OnGroupMuted(bot.groupMutedEvent)
 	bot.Client.OnGroupMessageRecalled(bot.groupRecallEvent)
@@ -240,7 +242,7 @@ func (bot *CQBot) SendGroupMessage(groupID int64, m *message.SendingMessage) int
 }
 
 // SendPrivateMessage 发送私聊消息
-func (bot *CQBot) SendPrivateMessage(target int64, m *message.SendingMessage) int32 {
+func (bot *CQBot) SendPrivateMessage(target int64, groupId int64, m *message.SendingMessage) int32 {
 	var newElem []message.IMessageElement
 	for _, elem := range m.Elements {
 		if i, ok := elem.(*LocalImageElement); ok {
@@ -292,16 +294,33 @@ func (bot *CQBot) SendPrivateMessage(target int64, m *message.SendingMessage) in
 		if msg != nil {
 			id = bot.InsertPrivateMessage(msg)
 		}
-	} else if code, ok := bot.tempMsgCache.Load(target); ok { // 临时会话
-		msg := bot.Client.SendTempMessage(code.(int64), target, m)
-		if msg != nil {
-			id = msg.Id
+	} else if code, ok := bot.tempMsgCache.Load(target); ok || groupId != 0 { // 临时会话
+		if groupId != 0 && !bot.Client.FindGroup(groupId).AdministratorOrOwner() {
+			log.Errorf("错误: 机器人在群(%v) 为非管理员或群主, 无法主动发起临时会话", groupId)
+			id = -1
+		} else if groupId != 0 && bot.Client.FindGroup(groupId).FindMember(target) == nil {
+			log.Errorf("错误: 群员(%v) 不在 群(%v), 无法发起临时会话", target, groupId)
+			id = -1
+		} else {
+			if code != nil {
+				groupId = code.(int64)
+			}
+			msg := bot.Client.SendTempMessage(groupId, target, m)
+			if msg != nil {
+				id = bot.InsertTempMessage(target, msg)
+			}
 		}
 	} else if _, ok := bot.oneWayMsgCache.Load(target); ok { // 单向好友
 		msg := bot.Client.SendPrivateMessage(target, m)
 		if msg != nil {
 			id = bot.InsertPrivateMessage(msg)
 		}
+	} else {
+		nickname := "Unknown"
+		if summaryInfo, _ := bot.Client.GetSummaryInfo(target); summaryInfo != nil {
+			nickname = summaryInfo.Nickname
+		}
+		log.Errorf("错误: 请先添加 %v(%v) 为好友", nickname, target)
 	}
 	if id == -1 {
 		return -1
@@ -344,6 +363,33 @@ func (bot *CQBot) InsertPrivateMessage(m *message.PrivateMessage) int32 {
 		"sender":      m.Sender,
 		"time":        m.Time,
 		"message":     ToStringMessage(m.Elements, m.Sender.Uin, true),
+	}
+	id := toGlobalID(m.Sender.Uin, m.Id)
+	if bot.db != nil {
+		buf := new(bytes.Buffer)
+		if err := gob.NewEncoder(buf).Encode(val); err != nil {
+			log.Warnf("记录聊天数据时出现错误: %v", err)
+			return -1
+		}
+		if err := bot.db.Put(binary.ToBytes(id), binary.GZipCompress(buf.Bytes()), nil); err != nil {
+			log.Warnf("记录聊天数据时出现错误: %v", err)
+			return -1
+		}
+	}
+	return id
+}
+
+// InsertTempMessage 临时消息入数据库
+func (bot *CQBot) InsertTempMessage(target int64, m *message.TempMessage) int32 {
+	val := MSG{
+		"message-id": m.Id,
+		// FIXME(InsertTempMessage) InternalId missing
+		"group":      m.GroupCode,
+		"group-name": m.GroupName,
+		"target":     target,
+		"sender":     m.Sender,
+		"time":       time.Now().Unix(),
+		"message":    ToStringMessage(m.Elements, m.Sender.Uin, true),
 	}
 	id := toGlobalID(m.Sender.Uin, m.Id)
 	if bot.db != nil {
@@ -438,12 +484,12 @@ func (bot *CQBot) formatGroupMessage(m *message.GroupMessage) MSG {
 			t, err := bot.Client.GetGroupMembers(group)
 			if err != nil {
 				log.Warnf("刷新群 %v 成员列表失败: %v", group.Uin, err)
-				return Failed(100, "GET_MEMBERS_API_ERROR", err.Error())
+				return nil
 			}
 			group.Members = t
 			mem = group.FindMember(m.Sender.Uin)
-			if mem != nil {
-				return Failed(100, "MEMBER_NOT_FOUND", "群员不存在")
+			if mem == nil {
+				return nil
 			}
 		}
 		ms := gm["sender"].(MSG)
